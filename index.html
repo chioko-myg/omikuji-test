@@ -248,34 +248,31 @@
      */
     async function loadOmikujiData() {
       try {
-        // data.json を取得する
-        const response = await fetch('data.json');
-
-        // 取得に失敗した場合はエラーを投げる
-        if (!response.ok) {
-          throw new Error('data.jsonの読み込みに失敗しました: ' + response.status);
-        }
-
-        // JSONデータをパース（変換）して各リストに保存
-        const jsonData = await response.json();
+    // --- data.json から ranks と locals を読み込む---
+        const jsonResponse = await fetch('data.json');
+        if (!jsonResponse.ok) throw new Error('data.jsonの読み込み失敗: ' + jsonResponse.status);
+        const jsonData = await jsonResponse.json();
         rankList  = jsonData.ranks;
         localList = jsonData.locals;
-        setList   = jsonData.sets;
 
-        // いずれかの配列が空の場合の警告
+    // --- sets.csv から setList を読み込む ---
+        const csvResponse = await fetch('sets.csv');
+        if (!csvResponse.ok) throw new Error('sets.csvの読み込み失敗: ' + csvResponse.status);
+        const csvText = await csvResponse.text();
+        setList = parseCsv(csvText);  // ← 下で定義するCSV解析関数
+
+    // 各配列の空チェック
         if (!rankList  || rankList.length  === 0) throw new Error('data.jsonのranksが空です');
         if (!localList || localList.length === 0) throw new Error('data.jsonのlocalsが空です');
-        if (!setList   || setList.length   === 0) throw new Error('data.jsonのsetsが空です');
+        if (!setList   || setList.length   === 0) throw new Error('sets.csvにデータがありません');
 
-        // 読み込み完了フラグを立てる
-        isDataLoaded = true;
-        console.log('おみくじデータを読み込みました。',
-          'ranks:', rankList.length, '件 /  locals:', localList.length, '件 / sets:', setList.length, '件');
+    isDataLoaded = true;
+        console.log('データ読み込み完了。',
+                    'ranks:', rankList.length, '件 / locals:', localList.length, '件 / sets:', setList.length, '件');
 
       } catch (error) {
-        // エラーが発生した場合はコンソールに表示し、ユーザーにも通知
         console.error('データ読み込みエラー:', error);
-        alert('おみくじデータの読み込みに失敗しました。\nページを再読み込みしてください。\n\nエラー詳細: ' + error.message);
+        alert('データの読み込みに失敗しました。\nページを再読み込みしてください。\n\nエラー詳細: ' + error.message);
       }
     }
 
@@ -455,6 +452,36 @@
       return array[randomIndex];
     }
 
+  /**
+  * CSVテキストを解析して、オブジェクトの配列に変換する
+  * 1行目をヘッダーとして扱い、2行目以降がデータになります
+  * @param {string} csvText - fetch で取得したCSVの生テキスト
+  * @returns {Array} オブジェクトの配列（例: [{set_label:"ラッキーカラー", set_content:"赤", image:""}]）
+  */
+    function parseCsv(csvText) {
+      // 改行コードを統一（WindowsのCR+LFもMacのCRも\nに揃える）
+      const lines = csvText.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+
+      // 空行を除去する
+      const nonEmptyLines = lines.filter(function(line) { return line.trim() !== ''; });
+
+      // 1行目はヘッダー行（set_label, set_content, image）として取得
+      const headers = nonEmptyLines[0].split(',').map(function(h) { return h.trim(); });
+
+      // 2行目以降をデータとして変換
+      const result = [];
+      for (let i = 1; i < nonEmptyLines.length; i++) {
+        const values = nonEmptyLines[i].split(',');
+        const obj = {};
+      // ヘッダーと値を対応させてオブジェクトを作る
+        headers.forEach(function(header, index) {
+          obj[header] = values[index] ? values[index].trim() : '';
+          });
+        result.push(obj);
+        }
+      return result;
+      }
+    
     /**
      * GA4におみくじ実行のイベントを送信する
      * @param {string} rank      - 出た運勢ランク
