@@ -154,7 +154,7 @@
           <!--
             ③-1 : セットのラベル（例：「ラッキーカラー」「今日のヒント」など）
             ③-2 : セットの内容（例：「赤」「早起きが吉」など）
-            data.json の set_label と set_content で管理します
+            data.json の set_action と set_question で管理します
           -->
           <p class="result-label">開運アクション</p>
           <p id="result-set-label">隊員のおすすめスポットを聞こう</p>
@@ -216,8 +216,8 @@
 
         sets 配列   : ランダム要素③（③-1と③-2はセット）のリスト
                       - id          : 管理用番号
-                      - set_label   : ③-1 ラベル（例："ラッキーカラー"）
-                      - set_content : ③-2 内容（例："赤"）
+                      - set_action   : ③-1 開運アクション（例："地域への愛を聞いてみよう"）
+                      - set_question : ③-2 開運クエスチョン（例："この地域を好きな理由はなんですか？"）
                       - image       : 画像ファイル名（images/フォルダに保存）
                                       画像なしの場合は "" でOK
     ============================================================
@@ -330,8 +330,8 @@
       document.getElementById('result-message').textContent = localItem.local;
 
       // ランダム要素③ : セット（ラベル＋内容）を表示
-      document.getElementById('result-set-label').textContent = setItem.set_label;
-      document.getElementById('result-set-content').textContent = setItem.set_content;
+      document.getElementById('result-set-label').textContent = setItem.set_action;
+      document.getElementById('result-set-content').textContent = setItem.set_question;
 
       // 画像の表示処理（setItemに紐づく画像を表示）
       displayImage(setItem.image);
@@ -456,7 +456,7 @@
   * CSVテキストを解析して、オブジェクトの配列に変換する
   * 1行目をヘッダーとして扱い、2行目以降がデータになります
   * @param {string} csvText - fetch で取得したCSVの生テキスト
-  * @returns {Array} オブジェクトの配列（例: [{set_label:"ラッキーカラー", set_content:"赤", image:""}]）
+  * @returns {Array} オブジェクトの配列（例: [{set_action:"地域への愛を聞いてみよう", set_question:"この地域を好きな理由はなんですか？", image:""}]）
   */
     function parseCsv(csvText) {
       // 改行コードを統一（WindowsのCR+LFもMacのCRも\nに揃える）
@@ -465,7 +465,7 @@
       // 空行を除去する
       const nonEmptyLines = lines.filter(function(line) { return line.trim() !== ''; });
 
-      // 1行目はヘッダー行（set_label, set_content, image）として取得
+      // 1行目はヘッダー行（set_action, set_question, image）として取得
       const headers = nonEmptyLines[0].split(',').map(function(h) { return h.trim(); });
 
       // 2行目以降をデータとして変換
