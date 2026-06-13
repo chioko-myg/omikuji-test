@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>おみくじ - 第5回 地域おこし協力隊フェス</title>
+
+  <!--
+  ============================================================
+  検索エンジンへのインデックスを禁止する設定
+  GitHub Pages で公開してもGoogle等の検索結果に表示されなくなります
+  ============================================================
+  -->
+  <meta name="robots" content="noindex, nofollow">
+
+  <!--
+  ============================================================
+  Google Analytics 4 (GA4) 設定
+  ★ 以下の「G-XXXXXXXXXX」を、あなたのGA4測定IDに書き換えてください
+     例: G-ABC1234567
+     GA4測定IDの確認方法:
+     Googleアナリティクス > 管理 > データストリーム > ウェブ
+  ============================================================
+  -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+
+    // ★ こちらの「G-XXXXXXXXXX」も測定IDに書き換えてください
+    gtag('config', 'G-XXXXXXXXXX');
+  </script>
+
+  <!-- Google Fonts: 和風フォントを読み込む -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;700;900&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+
+  <!-- スタイルシートの読み込み -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- ========== メインコンテンツ ========== -->
+  <main class="main-container">
+
+    <!-- ヘッダー -->
+    <header class="app-header">
+      <p class="app-subtitle">第5回 地域おこし協力隊フェス</p>
+      <h1 class="app-title">
+        <span class="title-deco" aria-hidden="true">⛩</span>
+        おみくじ
+        <span class="title-deco" aria-hidden="true">⛩</span>
+      </h1>
+    </header>
+
+    <!-- ========== スタート画面 ========== -->
+    <!--
+      id="start-screen" : 最初に表示される画面
+      おみくじを引いたら非表示になる
+    -->
+    <section id="start-screen" class="start-screen">
+
+      <!-- おみくじ筒のイラスト（CSSで描画） -->
+      <div class="omikuji-box" aria-hidden="true">
+        <div class="omikuji-tube">
+          <div class="tube-top"></div>
+          <div class="tube-body">
+            <span class="tube-label">御神籤</span>
+          </div>
+          <div class="tube-sticks">
+            <div class="stick"></div>
+            <div class="stick"></div>
+            <div class="stick"></div>
+          </div>
+        </div>
+      </div>
+
+      <p class="start-message">
+        ボタンを押して<br>今日の運勢を占おう！
+      </p>
+
+      <!--
+        「おみくじを引く」ボタン
+        クリックすると drawOmikuji() 関数が呼ばれる
+      -->
+      <button
+        id="draw-button"
+        class="draw-button"
+        onclick="drawOmikuji()"
+        aria-label="おみくじを引く"
+      >
+        <span class="button-icon" aria-hidden="true">🎋</span>
+        おみくじを引く
+      </button>
+
+    </section><!-- /#start-screen -->
+
+    <!-- ========== 結果表示画面 ========== -->
+    <!--
+      id="result-screen" : おみくじ結果が表示される画面
+      最初は hidden クラスで非表示
+      JavaScriptで hidden を付け外しして表示を切り替える
+    -->
+    <section id="result-screen" class="result-screen hidden" aria-live="polite">
+
+      <!-- 結果カード（巻物風デザイン） -->
+      <div class="result-card" id="result-card">
+
+        <!-- カード上部の巻物ロール装飾 -->
+        <div class="card-scroll-top" aria-hidden="true">
+          <div class="scroll-rod"></div>
+        </div>
+
+        <!-- =========================================
+             ランダム要素① : fortune（今日の運勢）
+             data.json の fortunes 配列から抽選
+             ========================================= -->
+        <div class="result-item result-fortune-area">
+          <p class="result-label">今日の運勢</p>
+          <p id="result-fortune" class="result-fortune">大吉</p>
+        </div>
+
+        <!-- 区切り線 -->
+        <div class="divider" aria-hidden="true"><span>✦ ✦ ✦</span></div>
+
+        <!-- =========================================
+             ランダム要素② : local（おすすめブース）
+             local.csv から独立してランダム抽選
+             ========================================= -->
+        <div class="result-item">
+          <p class="result-label">おすすめブース</p>
+          <p id="result-local" class="result-local">〇〇県△△市</p>
+        </div>
+
+        <!-- 区切り線 -->
+        <div class="divider" aria-hidden="true"><span>✦ ✦ ✦</span></div>
+
+        <!-- =========================================
+             ランダム要素③ : action ＋ question（セット）
+             action.csv から独立してランダム抽選
+             ③-1 : action  （開運アクション）
+             ③-2 : question（開運クエスチョン）
+             ========================================= -->
+        <div class="result-item">
+          <p class="result-label">開運アクション</p>
+          <p id="result-action" class="result-action">〇〇してみよう</p>
+        </div>
+
+        <div class="result-item result-question-area">
+          <p class="result-label">開運クエスチョン</p>
+          <p id="result-question" class="result-question">〇〇について考えてみましょう</p>
+        </div>
+
+        <!-- カード下部の巻物ロール装飾 -->
+        <div class="card-scroll-bottom" aria-hidden="true">
+          <div class="scroll-rod"></div>
+        </div>
+
+      </div><!-- /.result-card -->
+
+      <!-- もう一度引くボタン -->
+      <button
+        id="retry-button"
+        class="retry-button"
+        onclick="resetOmikuji()"
+        aria-label="もう一度おみくじを引く"
+      >
+        <span class="button-icon" aria-hidden="true">🔄</span>
+        もう一度引く
+      </button>
+
+    </section><!-- /#result-screen -->
+
+  </main><!-- /.main-container -->
+
+  <!-- ========== フッター ========== -->
+  <footer class="app-footer">
+    <p>第5回 地域おこし協力隊フェス</p>
+  </footer>
+
+  <!-- ========== JavaScript ========== -->
+  <script>
+    /*
+    ============================================================
+    おみくじWebアプリ メインスクリプト
+    ============================================================
+    【ファイル構成とデータの管理場所】
+
+      data.json   : ランダム要素① fortune（今日の運勢）を管理
+                    fortunes 配列に文字列で登録する
+                    同じ値を複数登録するとその分出やすくなる
+
+      local.csv   : ランダム要素② local（おすすめブース：自治体名）を管理
+                    ヘッダー行: local
+                    データ行 : 自治体名を1行1件で登録する
+
+      action.csv  : ランダム要素③ action と question のセットを管理
+                    ヘッダー行: action,question
+                    データ行 : 開運アクション,開運クエスチョン の順で登録する
+
+    【CSVファイルの文字コード】
+      UTF-8（BOMなし）で保存してください
+      ExcelなどでBOM付きになった場合も parseCsv() 内で自動除去します
+
+    【ランダム抽選の仕組み】
+      fortune / local / action+question は完全に独立して抽選されます
+      同じボタンを押すたびに異なる組み合わせが表示されます
+
+    【関数の一覧】
+      loadAllData()       : 起動時にJSON・CSV2種を並列で読み込む
+      drawOmikuji()       : ボタン押下時のメイン処理
+      displayResult()     : 抽選結果を画面に反映する
+      updateFortuneStyle(): 運勢に応じてカードの色を切り替える
+      showResultScreen()  : 結果画面を表示する
+      resetOmikuji()      : スタート画面に戻す
+      getRandomItem()     : 配列からランダムに1件返す
+      parseCsv()          : CSVテキストをオブジェクト配列に変換する
+      sendAnalyticsEvent(): GA4にイベントを送信する
+    ============================================================
+    */
+
+    // ---------------------------------------------------------
+    // グローバル変数
+    // 各CSVとJSONから読み込んだデータをここに保存する
+    // ---------------------------------------------------------
+
+    /** ランダム要素① 今日の運勢の文字列リスト（data.json より） */
+    let fortuneList = [];
+
+    /** ランダム要素② おすすめブース（自治体名）のリスト（local.csv より） */
+    let localList   = [];
+
+    /** ランダム要素③ 開運アクション＋開運クエスチョンのセットリスト（action.csv より） */
+    let actionList  = [];
+
+    /** 全データの読み込みが完了したかどうかのフラグ */
+    let isDataLoaded = false;
+
+    // ---------------------------------------------------------
+    // 1. データ読み込み
+    //    ページを開いたとき、JSONとCSV2種を同時に読み込む
+    // ---------------------------------------------------------
+
+    /**
+     * data.json・local.csv・action.csv を並列で読み込む関数
+     * Promise.all を使い、3つが全部揃ってから完了とする
+     * ページロード時（DOMContentLoaded）に自動で呼ばれる
+     */
+    async function loadAllData() {
+      try {
+
+        // 3つのファイルを同時に fetch（並列読み込みで高速化）
+        const [jsonResponse, localCsvResponse, actionCsvResponse] = await Promise.all([
+          fetch('data.json'),
+          fetch('local.csv'),
+          fetch('action.csv')
+        ]);
+
+        // --- それぞれ取得に失敗していないか確認 ---
+        if (!jsonResponse.ok) {
+          throw new Error('data.json の読み込みに失敗しました（HTTP ' + jsonResponse.status + '）');
+        }
+        if (!localCsvResponse.ok) {
+          throw new Error('local.csv の読み込みに失敗しました（HTTP ' + localCsvResponse.status + '）');
+        }
+        if (!actionCsvResponse.ok) {
+          throw new Error('action.csv の読み込みに失敗しました（HTTP ' + actionCsvResponse.status + '）');
+        }
+
+        // --- data.json をパースして fortuneList に保存 ---
+        const jsonData = await jsonResponse.json();
+        fortuneList = jsonData.fortunes;
+
+        // --- local.csv をパースして localList に保存 ---
+        const localCsvText = await localCsvResponse.text();
+        localList = parseCsv(localCsvText);
+
+        // --- action.csv をパースして actionList に保存 ---
+        const actionCsvText = await actionCsvResponse.text();
+        actionList = parseCsv(actionCsvText);
+
+        // --- 各配列が空でないか確認 ---
+        if (!fortuneList || fortuneList.length === 0) {
+          throw new Error('data.json の fortunes が空です');
+        }
+        if (!localList || localList.length === 0) {
+          throw new Error('local.csv にデータがありません');
+        }
+        if (!actionList || actionList.length === 0) {
+          throw new Error('action.csv にデータがありません');
+        }
+
+        // 全て正常に読み込めたらフラグを立てる
+        isDataLoaded = true;
+        console.log(
+          'データ読み込み完了。',
+          'fortune:', fortuneList.length, '件 /',
+          'local:',   localList.length,   '件 /',
+          'action:',  actionList.length,  '件'
+        );
+
+      } catch (error) {
+        // 読み込み失敗時はコンソールとアラートで通知
+        console.error('データ読み込みエラー:', error);
+        alert(
+          'データの読み込みに失敗しました。\n' +
+          'ページを再読み込みしてください。\n\n' +
+          'エラー詳細: ' + error.message
+        );
+      }
+    }
+
+    // ---------------------------------------------------------
+    // 2. おみくじを引く処理（メイン）
+    //    「おみくじを引く」ボタンを押したときに呼ばれる
+    // ---------------------------------------------------------
+
+    /**
+     * 3つの要素をそれぞれ独立してランダム抽選し、結果を表示する
+     */
+    function drawOmikuji() {
+
+      // データがまだ読み込めていない場合は処理を中断する
+      if (!isDataLoaded) {
+        alert('データを読み込み中です。しばらくお待ちください。');
+        return;
+      }
+
+      // ランダム要素① fortune : 今日の運勢を抽選
+      const selectedFortune = getRandomItem(fortuneList);
+
+      // ランダム要素② local : おすすめブース（自治体名）を抽選
+      //   localList の各要素は { local: "〇〇県△△市" } の形をしている
+      const selectedLocalItem = getRandomItem(localList);
+
+      // ランダム要素③ action + question : セットで抽選
+      //   actionList の各要素は { action: "...", question: "..." } の形をしている
+      const selectedActionItem = getRandomItem(actionList);
+
+      // GA4 にイベントを送信する（測定IDを設定している場合のみ有効）
+      sendAnalyticsEvent(selectedFortune, selectedLocalItem);
+
+      // 抽選結果を画面のカードに表示する
+      displayResult(selectedFortune, selectedLocalItem, selectedActionItem);
+
+      // スタート画面を隠して結果画面を表示する
+      showResultScreen();
+    }
+
+    // ---------------------------------------------------------
+    // 3. 結果表示処理
+    // ---------------------------------------------------------
+
+    /**
+     * 抽選された3要素を画面のカードに書き込む
+     *
+     * @param {string} fortune     - ランダム要素① 運勢の文字列（例: "大吉"）
+     * @param {Object} localItem   - ランダム要素② { local: "〇〇県△△市" }
+     * @param {Object} actionItem  - ランダム要素③ { action: "...", question: "..." }
+     */
+    function displayResult(fortune, localItem, actionItem) {
+
+      // ① 今日の運勢を表示
+      const fortuneElement = document.getElementById('result-fortune');
+      fortuneElement.textContent = fortune;
+      // 運勢の文字列に応じて文字色を切り替える
+      updateFortuneStyle(fortuneElement, fortune);
+
+      // ② おすすめブース（自治体名）を表示
+      //    local.csv のヘッダー名「local」に対応するプロパティを参照する
+      document.getElementById('result-local').textContent = localItem.local;
+
+      // ③-1 開運アクションを表示
+      //    action.csv のヘッダー名「action」に対応するプロパティを参照する
+      document.getElementById('result-action').textContent = actionItem.action;
+
+      // ③-2 開運クエスチョンを表示
+      //    action.csv のヘッダー名「question」に対応するプロパティを参照する
+      document.getElementById('result-question').textContent = actionItem.question;
+    }
+
+    /**
+     * 運勢の文字列に応じて、表示要素の CSS クラスを切り替える
+     * style.css の .fortune-〇〇 クラスで色を定義している
+     *
+     * ★ 新しい運勢を data.json に追加した場合は、
+     *    この関数と style.css の両方にも追記してください
+     *
+     * @param {HTMLElement} element - 運勢を表示している要素
+     * @param {string}      fortune - 運勢の文字列（例: "大吉"）
+     */
+    function updateFortuneStyle(element, fortune) {
+
+      // 既存のクラスをいったんリセットしてから付け直す
+      element.className = 'result-fortune';
+
+      if      (fortune === '大吉') { element.classList.add('fortune-daikichi'); }
+      else if (fortune === '吉')   { element.classList.add('fortune-kichi');    }
+      else if (fortune === '中吉') { element.classList.add('fortune-chukichi'); }
+      else if (fortune === '小吉') { element.classList.add('fortune-shokichi'); }
+      else if (fortune === '末吉') { element.classList.add('fortune-suekichi'); }
+      else if (fortune === '凶')   { element.classList.add('fortune-kyo');      }
+      else {
+        // 上記以外のカスタム運勢はデフォルトスタイルのまま
+        element.classList.add('fortune-other');
+      }
+    }
+
+    // ---------------------------------------------------------
+    // 4. 画面の切り替え処理
+    // ---------------------------------------------------------
+
+    /**
+     * 結果画面を表示し、スタート画面を非表示にする
+     * 巻物が開くアニメーションも制御する
+     */
+    function showResultScreen() {
+      const startScreen  = document.getElementById('start-screen');
+      const resultScreen = document.getElementById('result-screen');
+      const resultCard   = document.getElementById('result-card');
+
+      // スタート画面を隠す
+      startScreen.classList.add('hidden');
+
+      // 結果画面を表示する
+      resultScreen.classList.remove('hidden');
+
+      // アニメーションを再生するため、クラスを外してから付け直す
+      // （setTimeout で1フレーム待つことでアニメーションが確実に動く）
+      resultCard.classList.remove('animate-open');
+      setTimeout(function () {
+        resultCard.classList.add('animate-open');
+      }, 10);
+
+      // ページ先頭にスクロール（スマートフォンでも全体が見えるように）
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    /**
+     * スタート画面に戻す
+     * 「もう一度引く」ボタンを押したときに呼ばれる
+     */
+    function resetOmikuji() {
+      const startScreen  = document.getElementById('start-screen');
+      const resultScreen = document.getElementById('result-screen');
+      const resultCard   = document.getElementById('result-card');
+
+      // 結果画面を隠す
+      resultScreen.classList.add('hidden');
+
+      // アニメーションクラスをリセット（次回引いたときに再生されるように）
+      resultCard.classList.remove('animate-open');
+
+      // スタート画面を表示する
+      startScreen.classList.remove('hidden');
+
+      // ページ先頭に戻る
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // ---------------------------------------------------------
+    // 5. ユーティリティ関数（補助的な機能）
+    // ---------------------------------------------------------
+
+    /**
+     * 配列からランダムに1件取り出して返す
+     *
+     * @param  {Array} array - 選択元の配列
+     * @returns {*}          - ランダムに選ばれた要素
+     */
+    function getRandomItem(array) {
+      // Math.random() は 0以上1未満の小数を返す
+      // それに配列の長さをかけて整数に丸めることでランダムな添え字を得る
+      const randomIndex = Math.floor(Math.random() * array.length);
+      return array[randomIndex];
+    }
+
+    /**
+     * CSVテキストを解析して、オブジェクトの配列に変換する
+     *
+     * 【変換例】
+     *   入力（CSVテキスト）:
+     *     action,question
+     *     早起きしてみよう,朝の時間をどう使いたい？
+     *     散歩に出かけよう,どんな景色が好き？
+     *
+     *   出力（配列）:
+     *     [
+     *       { action: "早起きしてみよう", question: "朝の時間をどう使いたい？" },
+     *       { action: "散歩に出かけよう", question: "どんな景色が好き？" }
+     *     ]
+     *
+     * 【注意】
+     *   - 1行目をヘッダーとして扱う（列名になる）
+     *   - 空行は自動で除去する
+     *   - BOM（\ufeff）が含まれていても自動で除去する
+     *   - カンマを含む値を扱う場合はダブルクォートで囲む
+     *
+     * @param  {string} csvText - fetch で取得したCSVの生テキスト
+     * @returns {Array}         - オブジェクトの配列
+     */
+    function parseCsv(csvText) {
+
+      // BOM（Byte Order Mark: UTF-8 BOM付きファイルの先頭に入る不可視文字）を除去
+      csvText = csvText.replace(/^\ufeff/, '');
+
+      // 改行コードを \n に統一（Windows: \r\n、旧Mac: \r にも対応）
+      const lines = csvText.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+
+      // 空行を除去する
+      const nonEmptyLines = lines.filter(function (line) {
+        return line.trim() !== '';
+      });
+
+      // データが1行以下（ヘッダーのみ）の場合は空配列を返す
+      if (nonEmptyLines.length <= 1) {
+        return [];
+      }
+
+      // 1行目をヘッダーとして取得し、前後の空白を除去する
+      const headers = nonEmptyLines[0].split(',').map(function (h) {
+        return h.trim();
+      });
+
+      // 2行目以降をデータ行として処理する
+      const result = [];
+
+      for (let i = 1; i < nonEmptyLines.length; i++) {
+        const values = nonEmptyLines[i].split(',');
+        const obj = {};
+
+        // ヘッダーの列名と値を対応させてオブジェクトを作る
+        headers.forEach(function (header, index) {
+          // 値が存在しない列は空文字にする
+          obj[header] = (values[index] !== undefined) ? values[index].trim() : '';
+        });
+
+        result.push(obj);
+      }
+
+      return result;
+    }
+
+    /**
+     * GA4（Googleアナリティクス）におみくじ実行イベントを送信する
+     * GA4の測定IDが未設定の場合はスキップする（コンソールに通知）
+     *
+     * GA4 で確認できるイベント名: omikuji_draw
+     * 記録されるパラメータ:
+     *   omikuji_fortune : 出た運勢（例: "大吉"）
+     *   omikuji_local   : 出たおすすめブース（例: "〇〇県△△市"）
+     *
+     * @param {string} fortune   - 出た運勢の文字列
+     * @param {Object} localItem - 出た自治体情報オブジェクト { local: "..." }
+     */
+    function sendAnalyticsEvent(fortune, localItem) {
+      if (typeof gtag !== 'undefined') {
+        gtag('event', 'omikuji_draw', {
+          'omikuji_fortune': fortune,
+          'omikuji_local':   localItem.local
+        });
+        console.log('GA4イベント送信: omikuji_draw / fortune:', fortune, '/ local:', localItem.local);
+      } else {
+        console.log('GA4未設定のため、イベント送信をスキップしました');
+      }
+    }
+
+    // ---------------------------------------------------------
+    // ページ読み込み時の初期処理
+    // HTMLの読み込みが完了したら、データ読み込みを開始する
+    // ---------------------------------------------------------
+    document.addEventListener('DOMContentLoaded', function () {
+      loadAllData();
+    });
+
+  </script>
+</body>
+</html>
